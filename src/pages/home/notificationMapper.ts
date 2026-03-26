@@ -4,6 +4,11 @@ import type { NotificationItem } from "./notificationData";
 
 const COMMENT_ACCEPTED_MESSAGE = '내 댓글이 채택되었어요. 지금바로 확인해보세요!';
 
+const normalizeText = (value?: string) => {
+    const trimmed = value?.trim();
+    return trimmed ? trimmed : undefined;
+};
+
 const parsePoints = (message?: string) => {
     if (!message) return 0;
     const match = message.match(/[0-9,]+/);
@@ -49,7 +54,7 @@ const toNotificationItem = (item: NotificationApiItem): NotificationItem => {
         type,
         dateLabel: formatTimeAgo(item.createdAt),
         isRead: item.read,
-        message: item.message,
+        message: normalizeText(item.message),
         link: item.link,
         actorUserId: item.actorUserId,
         name: item.actorName,
@@ -68,18 +73,10 @@ const toNotificationItem = (item: NotificationApiItem): NotificationItem => {
                 points: parsePoints(item.message),
             };
         case 'reply':
-            return {
-                ...base,
-                type,
-                parentComment: '',
-                replyContent: item.message,
-            };
         case 'comment':
             return {
                 ...base,
                 type,
-                postTitle: '',
-                commentContent: item.message,
             };
         case 'commentAccepted':
             return {

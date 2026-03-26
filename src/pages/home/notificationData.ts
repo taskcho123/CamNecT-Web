@@ -43,14 +43,10 @@ export type CommentAcceptedNotification = NotificationBase & {
 
 export type ReplyNotification = NotificationBase & {
   type: 'reply';
-  parentComment: string;
-  replyContent: string;
 };
 
 export type CommentNotification = NotificationBase & {
   type: 'comment';
-  postTitle: string;
-  commentContent: string;
 };
 
 export type FollowingNotification = NotificationBase & {
@@ -127,52 +123,5 @@ export const notificationIconAssets: NotificationIconAsset[] = [
       '</clipPath>' +
       '</defs>' +
       '</svg>',
-  },
-];
-
-export const notificationList: NotificationItem[] = [
-  {
-    id: 'notice-1',
-    type: 'coffeeChatRequest',
-    name: '정하린',
-    profileImageUrl: '',
-    dateLabel: '1일 전',
-    isRead: false,
-  },
-  {
-    id: 'notice-2',
-    type: 'pointUse',
-    points: 12000,
-    dateLabel: '2일 전',
-    isRead: true,
-  },
-  {
-    id: 'notice-3',
-    type: 'pointEarn',
-    points: 3200,
-    dateLabel: '2일 전',
-    isRead: false,
-  },
-  {
-    id: 'notice-4',
-    type: 'commentAccepted',
-    dateLabel: '3일 전',
-    isRead: true,
-  },
-  {
-    id: 'notice-5',
-    type: 'reply',
-    parentComment: '이번 주 스터디 일정이 어떻게 되나요?',
-    replyContent: '금요일 7시에 온라인으로 진행합니다.',
-    dateLabel: '5일 전',
-    isRead: false,
-  },
-  {
-    id: 'notice-6',
-    type: 'comment',
-    postTitle: '프로젝트 모집합니다!',
-    commentContent: '관심있어요. 지원 방법 알려주세요!',
-    dateLabel: '6일 전',
-    isRead: true,
   },
 ];

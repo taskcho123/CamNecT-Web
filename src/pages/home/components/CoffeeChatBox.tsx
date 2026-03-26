@@ -3,6 +3,7 @@ import Card from '../../../components/Card';
 // TODO: 백엔드 커피챗 요청 데이터와 페이지 이동 핸들러(onViewAll)를 연결해야 합니다.
 
 type CoffeeChatRequest = {
+    requestId?: string;
     name: string;
     major: string;
     studentId: string;
@@ -12,9 +13,10 @@ type CoffeeChatBoxProps = {
     requests: CoffeeChatRequest[];
     totalCount?: number;
     onViewAll?: () => void;
+    onRequestClick?: (request: CoffeeChatRequest) => void;
 };
 
-const CoffeeChatBox = ({ requests, totalCount, onViewAll }: CoffeeChatBoxProps) => {
+const CoffeeChatBox = ({ requests, totalCount, onViewAll, onRequestClick }: CoffeeChatBoxProps) => {
     const requestCount = typeof totalCount === 'number' ? totalCount : requests.length;
     const visibleRequests = requests.slice(0, 2);
 
@@ -66,7 +68,11 @@ const CoffeeChatBox = ({ requests, totalCount, onViewAll }: CoffeeChatBoxProps) 
                             type="button"
                             className="cursor-pointer text-m-12 text-primary tracking-[-0.04em]"
                             onClick={() => {
-                                // TODO: 요청확인 클릭 시 커피챗 요청 상세 라우터 연결 예정
+                                if (onRequestClick) {
+                                    onRequestClick(request);
+                                    return;
+                                }
+                                onViewAll?.();
                             }}
                         >
                             요청확인

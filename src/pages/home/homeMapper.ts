@@ -66,6 +66,7 @@ export const mapHomeResponseToViewModel = (
     const { data } = response;
 
     const coffeeChatRequests: CoffeeChatRequest[] = (data.coffeeChat?.latest2 ?? []).map((request) => ({
+        requestId: String(request.requestId),
         name: request.senderName,
         major: request.majorName,
         studentId: request.studentNo,

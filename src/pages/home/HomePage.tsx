@@ -17,7 +17,6 @@ import CommunityBox from './components/CommunityBox';
 import ContestBox from './components/ContestBox';
 import PointBox from './components/PointBox';
 import RecommendBox from './components/RecommendBox';
-import { coffeeChatRequests, contests, homeGreetingUser, recommendList } from './homeData';
 import { mapHomeResponseToViewModel } from './homeMapper';
 
 type PopUpConfig = {
@@ -121,14 +120,16 @@ export const HomePage = () => {
     const storedUserId = useAuthStore((state) => state.user?.id);
     const userIdParam = resolveUserIdParam(storedUserId);
     const hasValidUserId = userIdParam !== null;
+    const point = usePointStore((state) => state.point);
+    const setPoint = usePointStore((state) => state.setPoint);
 
     const fallbackViewModel = {
-        userName: storedUserName ?? homeGreetingUser.name,
-        coffeeChatRequests,
-        coffeeChatTotalCount: coffeeChatRequests.length,
-        pointBalance: 1230,
-        recommendList,
-        contests,
+        userName: storedUserName ?? '',
+        coffeeChatRequests: [],
+        coffeeChatTotalCount: 0,
+        pointBalance: point,
+        recommendList: [],
+        contests: [],
     };
 
     const { data: homeResponse, error: homeError } = useQuery({
@@ -146,9 +147,6 @@ export const HomePage = () => {
         staleTime: 30 * 1000,
     });
 
-    const point = usePointStore((state) => state.point);
-    const setPoint = usePointStore((state) => state.setPoint);
-
     const homeViewModel = mapHomeResponseToViewModel(homeResponse, fallbackViewModel);
     
     // API에서 가져온 포인트를 전역 스토어에 동기화
@@ -159,7 +157,8 @@ export const HomePage = () => {
     }, [homeResponse?.data?.point?.balance, setPoint]);
 
     const visibleRecommands = homeViewModel.recommendList.slice(0, 2);
-    const userName = homeViewModel.userName;
+    const userName = homeViewModel.userName.trim();
+    const displayedPoint = homeResponse?.data?.point?.balance ?? point;
     const unreadCount = unreadCountResponse?.data?.unreadCount;
     const hasUnreadNotifications =
         typeof unreadCount === 'number' ? unreadCount > 0 : hasUnreadNotificationsFromStore;
@@ -180,7 +179,13 @@ export const HomePage = () => {
                     {/* 1-1: 사용자 인사 메시지 */}
                     <div className="flex flex-col cursor-pointer gap-[7px] px-[6px] py-[13px]">
                         <p className="text-sb-18 text-gray-900 tracking-[-0.04em]">
-                            안녕하세요, <span className="text-primary">{userName}</span>님!
+                            {userName ? (
+                                <>
+                                    안녕하세요, <span className="text-primary">{userName}</span>님!
+                                </>
+                            ) : (
+                                '안녕하세요!'
+                            )}
                         </p>
                         <p className="text-m-14 text-gray-750 tracking-[-0.04em]">
                             오늘도 성공적인 캠퍼스 라이프를 응원합니다!
@@ -191,12 +196,19 @@ export const HomePage = () => {
                         requests={homeViewModel.coffeeChatRequests}
                         totalCount={homeViewModel.coffeeChatTotalCount}
                         onViewAll={() => navigate('/chat/requests')}
+                        onRequestClick={(request) =>
+                            navigate(
+                                request.requestId
+                                    ? `/chat/requests/${request.requestId}`
+                                    : '/chat/requests',
+                            )
+                        }
                     />
                     {/* 1-2: 일정 박스 + 포인트/커뮤니티 박스 */}
                     <div className="flex w-full flex-col gap-[15px]">
                         {/*<CheckScheduleBox />*/}
                         <div className="flex w-full justify-between gap-[20px]">
-                            <PointBox points={point} />
+                            <PointBox points={displayedPoint} />
                             <CommunityBox />
                         </div>
                     </div>

@@ -1,6 +1,10 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import type {
+  NotificationListResponse,
+  NotificationUnreadCountResponse,
+} from '../../api-types/notificationApiTypes';
 import { requestNotificationRead, requestNotifications } from '../../api/notifications';
 import PopUp from '../../components/Pop-up';
 import { HeaderLayout } from '../../layouts/HeaderLayout';
@@ -60,6 +64,19 @@ const getErrorPopUpConfig = (status: number | null): PopUpConfig | null => {
   }
   return null;
 };
+
+const normalizeNotificationLink = (link?: string | null) => {
+  if (typeof link !== 'string') return null;
+
+  const trimmed = link.trim();
+  if (!trimmed) return null;
+  if (/^(https?:)?\/\//i.test(trimmed)) return trimmed;
+  if (trimmed.startsWith('/')) return trimmed;
+
+  return `/${trimmed.replace(/^\.?\//, '')}`;
+};
+
+const isExternalLink = (link: string) => /^(https?:)?\/\//i.test(link);
 
 const titleMap: Record<NotificationType, string> = {
   coffeeChatRequest: '커피챗 요청',
@@ -136,21 +153,6 @@ const renderContent = (notification: NotificationItem) => {
         </p>
       );
     case 'reply':
-      if (notification.message) {
-        return (
-          <p className="text-r-14 text-[var(--ColorGray3,#646464)]">
-            {notification.message}
-          </p>
-        );
-      }
-      return (
-        <div className="text-r-14 text-[var(--ColorGray3,#646464)]">
-          <span className="block truncate">{notification.parentComment}</span>
-          <span className="block truncate">
-            새로운 답글이 달렸어요: {notification.replyContent}
-          </span>
-        </div>
-      );
     case 'comment':
       if (notification.message) {
         return (
@@ -160,12 +162,9 @@ const renderContent = (notification: NotificationItem) => {
         );
       }
       return (
-        <div className="text-r-14 text-[var(--ColorGray3,#646464)]">
-          <span className="block truncate">{notification.postTitle}</span>
-          <span className="block truncate">
-            새로운 댓글이 달렸어요: {notification.commentContent}
-          </span>
-        </div>
+        <p className="text-r-14 text-[var(--ColorGray3,#646464)]">
+          알림이 도착했습니다.
+        </p>
       );
     case 'followingPosted':
     case 'teamApplicationReceived':
@@ -236,7 +235,7 @@ export const NotificationPage = () => {
   const hasValidUserId = userIdParam !== null;
   const items = useNotificationStore((state) => state.items);
   const markAsRead = useNotificationStore((state) => state.markAsRead);
-  const setItems = useNotificationStore((state) => state.setItems);
+  const syncItems = useNotificationStore((state) => state.syncItems);
 
   const { data: notificationResponse, error: notificationError, isLoading } = useQuery({
     queryKey: ['notifications', userIdParam],
@@ -248,8 +247,8 @@ export const NotificationPage = () => {
   useEffect(() => {
     if (!notificationResponse) return;
     const mappedItems = mapNotificationResponseToItems(notificationResponse);
-    setItems(mappedItems);
-  }, [notificationResponse, setItems]);
+    syncItems(mappedItems);
+  }, [notificationResponse, syncItems]);
 
   const queryErrorConfig = useMemo(() => {
     if (isErrorDismissed) return null;
@@ -258,18 +257,58 @@ export const NotificationPage = () => {
   }, [notificationError, isErrorDismissed]);
 
   const handleNotificationClick = async (notification: NotificationItem) => {
-    markAsRead(notification.id);
-    if (hasValidUserId) {
+    if (!notification.isRead) {
+      markAsRead(notification.id);
+    }
+
+    if (hasValidUserId && !notification.isRead) {
+      queryClient.setQueryData<NotificationListResponse>(
+        ['notifications', userIdParam],
+        (current) => {
+          if (!current?.data?.items) return current;
+
+          return {
+            ...current,
+            data: {
+              ...current.data,
+              items: current.data.items.map((item) =>
+                String(item.id) === notification.id ? { ...item, read: true } : item,
+              ),
+            },
+          };
+        },
+      );
+
+      queryClient.setQueryData<NotificationUnreadCountResponse>(
+        ['notificationsUnreadCount', userIdParam],
+        (current) => {
+          if (!current?.data) return current;
+
+          return {
+            ...current,
+            data: {
+              ...current.data,
+              unreadCount: Math.max(0, current.data.unreadCount - 1),
+            },
+          };
+        },
+      );
+
       try {
         await requestNotificationRead({
           userId: userIdParam as string | number,
           id: notification.id,
         });
-        // 알림 읽음 처리 성공 시 안 읽은 개수 쿼리 무효화 (홈 화면 배지 업데이트용)
-        queryClient.invalidateQueries({ queryKey: ['notificationsUnreadCount'] });
-        // 알림 목록 데이터 업데이트 (목록 UI 갱신용)
-        queryClient.invalidateQueries({ queryKey: ['notifications', userIdParam] });
+        queryClient.invalidateQueries({
+          queryKey: ['notificationsUnreadCount', userIdParam],
+        });
       } catch (error) {
+        queryClient.invalidateQueries({
+          queryKey: ['notifications', userIdParam],
+        });
+        queryClient.invalidateQueries({
+          queryKey: ['notificationsUnreadCount', userIdParam],
+        });
         const status = getErrorStatus(error);
         const config = getErrorPopUpConfig(status);
         if (config) {
@@ -279,8 +318,13 @@ export const NotificationPage = () => {
     }
 
     // 서버가 준 link가 있다면 최우선적으로 거기로 이동
-    if (notification.link) {
-      navigate(notification.link);
+    const normalizedLink = normalizeNotificationLink(notification.link);
+    if (normalizedLink) {
+      if (isExternalLink(normalizedLink)) {
+        window.location.assign(normalizedLink);
+      } else {
+        navigate(normalizedLink);
+      }
       return;
     }
 

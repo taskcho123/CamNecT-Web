@@ -301,14 +301,6 @@ export const router = createBrowserRouter([
                         ]
                     },
                     {
-                        path: "community",
-                        element: <CommunityPage />,
-                    },
-                    {
-                        path: "community/post/:postId",
-                        element: <CommunityPostPage />,
-                    },
-                    {
                         path: "shop",
                         children: [
                             {
@@ -341,14 +333,6 @@ export const router = createBrowserRouter([
                                 element: <CommunityPostPage />,
                             },
                         ]
-                    },
-                    {
-                        path: "community/write",
-                        element: <WritePage />,
-                    },
-                    {
-                        path: "community/edit/:postId",
-                        element: <WritePage />,
                     },
                 ]
             },
