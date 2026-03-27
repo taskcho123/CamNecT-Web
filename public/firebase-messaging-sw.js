@@ -19,6 +19,17 @@ firebase.initializeApp(firebaseConfig);
 // 3. 메시징 객체 생성
 const messaging = firebase.messaging();
 
+const normalizeNotificationLink = (link) => {
+    if (typeof link !== 'string') return '/';
+
+    const trimmed = link.trim();
+    if (!trimmed) return '/';
+    if (/^(https?:)?\/\//i.test(trimmed)) return trimmed;
+    if (trimmed.startsWith('/')) return trimmed;
+
+    return `/${trimmed.replace(/^\.?\//, '')}`;
+};
+
 // todo 4,5번 이해할 것
 // 4. 백그라운드 메시지 핸들러
 messaging.onBackgroundMessage((payload) => {
@@ -34,7 +45,7 @@ messaging.onBackgroundMessage((payload) => {
         badge: '/icons/camnect1.png',
         // 클릭 시 사용할 데이터들을 보관
         data: {
-            link: payload.data?.link || '/',
+            link: normalizeNotificationLink(payload.data?.link),
             type: payload.data?.type,
             requestId: payload.data?.requestId
         }
@@ -47,7 +58,7 @@ messaging.onBackgroundMessage((payload) => {
 self.addEventListener('notificationclick', function (event) {
     event.notification.close(); 
 
-    const urlToOpen = event.notification.data?.link || '/';          
+    const urlToOpen = normalizeNotificationLink(event.notification.data?.link);          
 
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (clientList) {

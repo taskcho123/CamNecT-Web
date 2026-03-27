@@ -1,6 +1,6 @@
-import { initializeApp } from "firebase/app";
-import { getMessaging } from "firebase/messaging";
-import { getInstallations } from "firebase/installations";
+import { initializeApp, type FirebaseApp } from "firebase/app";
+import { getMessaging, type Messaging } from "firebase/messaging";
+import { getInstallations, type Installations } from "firebase/installations";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -12,11 +12,32 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
-// Firebase App 초기화
-const app = initializeApp(firebaseConfig);
+const requiredFirebaseConfigKeys = [
+  "apiKey",
+  "authDomain",
+  "projectId",
+  "storageBucket",
+  "messagingSenderId",
+  "appId",
+] as const;
 
-// messaging(푸시알림) 및 설치 (FID 발급용) 객체
-export const messaging = getMessaging(app);
-export const installations = getInstallations(app);
+export const isFirebaseConfigured = requiredFirebaseConfigKeys.every((key) => {
+  const value = firebaseConfig[key];
+  return typeof value === "string" && value.trim().length > 0;
+});
+
+let app: FirebaseApp | null = null;
+let messaging: Messaging | null = null;
+let installations: Installations | null = null;
+
+if (isFirebaseConfigured) {
+  app = initializeApp(firebaseConfig);
+  installations = getInstallations(app);
+  messaging = getMessaging(app);
+} else if (import.meta.env.DEV) {
+  console.warn("Firebase 환경변수가 누락되어 FCM 기능을 비활성화합니다.");
+}
+
+export { app, messaging, installations };
 
 export default app;
